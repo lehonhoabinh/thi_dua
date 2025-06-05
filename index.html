@@ -1,3 +1,4 @@
+<!-- Full HTML with per-category comment fields -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -19,7 +20,7 @@
     label {
       font-weight: bold;
     }
-    select, input[type="date"], input[type="text"], input[type="password"] {
+    select, input[type="date"], input[type="text"] {
       width: 100%;
       padding: 8px;
       margin: 8px 0;
@@ -33,6 +34,17 @@
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+    .violation {
+      margin-bottom: 12px;
+    }
+    .violation label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .violation input[type="number"] {
+      width: 100%;
+      margin-bottom: 4px;
+    }
     button {
       background: #4CAF50;
       color: white;
@@ -43,46 +55,151 @@
       font-size: 16px;
       cursor: pointer;
       margin-top: 10px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
   <h2>Thi đua lớp học</h2>
-  <div class="section" id="loginSection">
-    <label for="username">Tên đăng nhập:</label>
-    <input type="text" id="username" placeholder="Nhập tên đăng nhập">
-    <label for="password">Mật khẩu:</label>
-    <input type="password" id="password" placeholder="Nhập mật khẩu">
-    <button onclick="login()">🔐 Đăng nhập</button>
-  </div>
+  <div class="section">
+    <label for="class">Lớp học:</label>
+    <select id="class">
+      <option>6A1</option>
+      <option>6A2</option>
+      <option>6A3</option>
+    </select>
 
-  <div class="section" id="mainApp" style="display:none;">
-    <!-- Phần giao diện ghi nhận như cũ sẽ hiển thị tại đây sau khi đăng nhập thành công -->
-    <p>✅ Đăng nhập thành công! Các chức năng đã mở khóa.</p>
+    <label for="date">Ngày:</label>
+    <input type="date" id="date">
+
+    <label for="monitor">Người trực:</label>
+    <input type="text" id="monitor" placeholder="Nhập tên người trực">
+
+    <div class="violation">
+      <label>Vệ sinh 🧹</label>
+      <input type="number" id="vs" value="0">
+      <input type="text" id="vs_note" placeholder="Ghi chú vệ sinh (Khu vực cụ thể)">
+    </div>
+    <div class="violation">
+      <label>Đồng phục 👕</label>
+      <input type="number" id="dp" value="0">
+      <input type="text" id="dp_note" placeholder="Ghi chú đồng phục (HS cụ thể)">
+    </div>
+    <div class="violation">
+      <label>Điểm tốt ✅</label>
+      <input type="number" id="dt" value="0">
+      <input type="text" id="dt_note" placeholder="Ghi chú điểm tốt (HS cụ thể)">
+    </div>
+    <div class="violation">
+      <label>Điểm xấu ❌</label>
+      <input type="number" id="dx" value="0">
+      <input type="text" id="dx_note" placeholder="Ghi chú điểm xấu (HS cụ thể)">
+    </div>
+    <div class="violation">
+      <label>Thưởng phát sinh 🎁</label>
+      <input type="number" id="extraPlus" value="0">
+      <input type="text" id="extraPlus_note" placeholder="Ghi chú thưởng phát sinh">
+    </div>
+    <div class="violation">
+      <label>Phạt phát sinh ⚠️</label>
+      <input type="number" id="extraMinus" value="0">
+      <input type="text" id="extraMinus_note" placeholder="Ghi chú phạt phát sinh">
+    </div>
+
+    <button onclick="saveData()">📥 Ghi nhận</button>
+    <button onclick="exportToExcel()">📤 Xuất Excel</button>
   </div>
 
   <script>
-    const USERS = [
-      { user: "admin", pass: "123456" },
-      { user: "gv1", pass: "thi_dua" }
-    ];
+    document.getElementById("date").valueAsDate = new Date();
 
-    function login() {
-      const u = document.getElementById("username").value.trim();
-      const p = document.getElementById("password").value;
-      const ok = USERS.some(acc => acc.user === u && acc.pass === p);
-      if (ok) {
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("mainApp").style.display = "block";
-        loadApp();
-      } else {
-        alert("Sai tên đăng nhập hoặc mật khẩu!");
+    function saveData() {
+      const data = {
+        class: document.getElementById("class").value,
+        date: document.getElementById("date").value,
+        monitor: document.getElementById("monitor").value.trim(),
+        vs: parseInt(document.getElementById("vs").value),
+        dp: parseInt(document.getElementById("dp").value),
+        dt: parseInt(document.getElementById("dt").value),
+        dx: parseInt(document.getElementById("dx").value),
+        extraPlus: parseInt(document.getElementById("extraPlus").value),
+        extraMinus: parseInt(document.getElementById("extraMinus").value),
+        notes: {
+          vs: document.getElementById("vs_note").value.trim(),
+          dp: document.getElementById("dp_note").value.trim(),
+          dt: document.getElementById("dt_note").value.trim(),
+          dx: document.getElementById("dx_note").value.trim(),
+          extraPlus: document.getElementById("extraPlus_note").value.trim(),
+          extraMinus: document.getElementById("extraMinus_note").value.trim()
+        }
+      };
+
+      const logs = JSON.parse(localStorage.getItem("discipline_logs") || "[]");
+      const index = logs.findIndex(e => e.class === data.class && e.date === data.date);
+      if (index !== -1) {
+        if (!confirm("Đã có bản ghi hôm nay. Ghi đè?")) return;
+        logs.splice(index, 1);
       }
+      logs.push(data);
+      localStorage.setItem("discipline_logs", JSON.stringify(logs));
+      alert("Đã lưu thành công!");
+      renderLogs();
+    }
+  
+    function renderLogs() {
+      const logs = JSON.parse(localStorage.getItem("discipline_logs") || "[]");
+      let html = '<h4>Chi tiết vi phạm</h4>';
+      logs.slice().reverse().forEach(log => {
+        html += `<div style='margin-bottom: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 8px;'>
+          <strong>${log.class}</strong> - ${log.date} 👤 ${log.monitor}<br>
+          🧹 ${log.vs} (${log.notes?.vs || ""})<br>
+          👕 ${log.dp} (${log.notes?.dp || ""})<br>
+          ✅ ${log.dt} (${log.notes?.dt || ""})<br>
+          ❌ ${log.dx} (${log.notes?.dx || ""})<br>
+          🎁 ${log.extraPlus} (${log.notes?.extraPlus || ""})<br>
+          ⚠️ ${log.extraMinus} (${log.notes?.extraMinus || ""})<br>
+        </div>`;
+      });
+      const logContainer = document.createElement("div");
+      logContainer.innerHTML = html;
+      let old = document.getElementById("logList");
+      if (old) old.remove();
+      logContainer.id = "logList";
+      document.body.appendChild(logContainer);
     }
 
-    function loadApp() {
-      // Đây là nơi bạn chèn phần HTML giao diện chính đã xây dựng (form nhập điểm, nút lưu, xuất Excel...)
+    function exportToExcel() {
+      const logs = JSON.parse(localStorage.getItem("discipline_logs") || "[]");
+      const flatLogs = logs.map(log => ({
+        Lớp: log.class,
+        Ngày: log.date,
+        "Người trực": log.monitor,
+        "Vệ sinh": log.vs,
+        "Ghi chú VS": log.notes?.vs || "",
+        "Đồng phục": log.dp,
+        "Ghi chú DP": log.notes?.dp || "",
+        "Điểm tốt": log.dt,
+        "Ghi chú tốt": log.notes?.dt || "",
+        "Điểm xấu": log.dx,
+        "Ghi chú xấu": log.notes?.dx || "",
+        "Thưởng phát sinh": log.extraPlus,
+        "Ghi chú thưởng": log.notes?.extraPlus || "",
+        "Phạt phát sinh": log.extraMinus,
+        "Ghi chú phạt": log.notes?.extraMinus || ""
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(flatLogs);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Thi dua");
+      XLSX.writeFile(workbook, "thi_dua.xlsx");
     }
-  </script>
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
+
